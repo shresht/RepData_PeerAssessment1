@@ -1,90 +1,100 @@
-Reading the data
-----------------
+# Reproducible Research: Peer Assessment 1
 
-I'm going to start off by reading the data.
+## Loading and preprocessing the data
 
-    setwd("D://Shresht/My stuff/Science/r/rr/cp1/activityd1")
-    k <- read.csv("activity.csv")
-    k$time <- sub("(..)$",":\\1",k$interval)
-    k$datetime <- as.POSIXct(paste(k$date,k$time), format="%Y-%m-%d %H:%M")
 
-Total number of steps each day
-------------------------------
+```r
+setwd("D://Shresht/My stuff/Science/r/rr/cp1/activityd1")
+k <- read.csv("activity.csv")
+k$time <- sub("(..)$",":\\1",k$interval)
+k$datetime <- as.POSIXct(paste(k$date,k$time), format="%Y-%m-%d %H:%M")
+```
 
-After finding the total number of steps each day,a histogram for the
-total number of steps is plotted. We then calculate then mean and median
-number of steps per day
 
-    lamp <- aggregate(k$steps,by=list(day=k$date),FUN="sum")## total steps per day
-    hist(lamp$x,main = "Distribution of total distance covered",xlab = "distance")
+## What is mean total number of steps taken per day?
 
-![](PA1_template_files/figure-markdown_strict/total%20steps-1.png)
 
-    cam <- aggregate(k$steps,by=list(day=k$date),FUN="mean")## calculates the mean steps per day
-    jose <- aggregate(k$steps,by=list(day=k$date),FUN="median")
+```r
+lamp <- aggregate(k$steps,by=list(day=k$date),FUN="sum")## total steps per day
+hist(lamp$x,main = "Distribution of total distance covered",xlab = "distance")
+```
 
-Time series
-===========
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
 
-Next, After that,the time series plot for the 5 minute intervals
-averaged across all the days are plotted.
+```r
+cam <- aggregate(k$steps,by=list(day=k$date),FUN="mean")## calculates the mean steps per day
+jose <- aggregate(k$steps,by=list(day=k$date),FUN="median")
+```
 
-    ka <- k[order(k[,3]),]## ordering the data frame based on intervals
-    kap <- ka[complete.cases(ka$steps),]## removing the rows with missing values
-    drog <- aggregate(kap$steps,by=list(i=kap$interval),FUN="mean")## calculates the mean steps per interval
-    ##drog$i <- sub("(..)$",":\\1",drog$i)
-    plot(drog$i,drog$x,type = "l",xlab = "interval",ylab = "mean number of steps")
 
-![](PA1_template_files/figure-markdown_strict/time%20series-1.png)
+## What is the average daily activity pattern?
 
-    drog[which.max(drog$x),]
+```r
+ka <- k[order(k[,3]),]## ordering the data frame based on intervals
+kap <- ka[complete.cases(ka$steps),]## removing the rows with missing values
+drog <- aggregate(kap$steps,by=list(i=kap$interval),FUN="mean")## calculates the mean steps per interval
+##drog$i <- sub("(..)$",":\\1",drog$i)
+plot(drog$i,drog$x,type = "l",xlab = "interval",ylab = "mean number of steps")
+```
 
-    ##       i        x
-    ## 104 835 206.1698
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
 
-Imputing missing values
-=======================
+```r
+drog[which.max(drog$x),]
+```
 
-We calculate the total number of missing values in the entire set.To
-then fill in the missing values in the set,we calculate the mean of the
-interval of which the value belongs to.The average of that interval is
-filled in for the missing value.
+```
+##       i        x
+## 104 835 206.1698
+```
 
-    kapa <- ka[!complete.cases(ka$steps),] ## data frame with only missing values
-    length(kapa$steps) ## total number of missing values in the 'steps' vector in the data frame
 
-    ## [1] 2304
 
-    ################# I am going to replace the NA values in each interval by the mean of that interval
-    library(plyr)
-    impute.mean <- function(x)replace(x,is.na(x),mean(x,na.rm=TRUE))
-    ka2 <- ddply(ka,~interval,transform,steps=impute.mean(steps))
-    ka2 <- ka2[order(ka2$interval),]
+## Imputing missing values
 
-The code below represents code used for generating a histogram for the
-total distance covered per day after the missing values are filled in.
+We calculate the total number of missing values in the entire set.To then fill in the missing values in the set,we calculate the mean of the interval of which the value belongs to.The average of that interval is filled in for the missing value.
 
-    lamp2 <- aggregate(ka2$steps,by=list(day=ka2$date),FUN="sum")
-    hist(lamp2$x,main = "Distribution of total distance covered",xlab = "distance")
+```r
+kapa <- ka[!complete.cases(ka$steps),] ## data frame with only missing values
+length(kapa$steps) ## total number of missing values in the 'steps' vector in the data frame
+```
 
-![](PA1_template_files/figure-markdown_strict/new%20hist-1.png) Below is
-the code for the new mean and median for each interval.
+```
+## [1] 2304
+```
 
-    cam2 <- aggregate(ka2$steps,by=list(interval=ka2$interval),FUN="mean")
-    jose2 <- aggregate(ka2$steps,by=list(interval=ka2$interval),FUN="median")
+```r
+################# I am going to replace the NA values in each interval by the mean of that interval
+library(plyr)
+impute.mean <- function(x)replace(x,is.na(x),mean(x,na.rm=TRUE))
+ka2 <- ddply(ka,~interval,transform,steps=impute.mean(steps))
+ka2 <- ka2[order(ka2$interval),]
+```
+The code below represents code used for generating a histogram for the total distance covered per day after the missing values are filled in
 
-Weekdays and weekends
-=====================
+```r
+lamp2 <- aggregate(ka2$steps,by=list(day=ka2$date),FUN="sum")
+hist(lamp2$x,main = "Distribution of total distance covered",xlab = "distance")
+```
 
-Now we are going to crete a time series plot for average distance
-covered per interval based on whether it's a weekday or weekend.
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
-    ka2$weekend = chron::is.weekend(ka2$date)
-    ka21 <- aggregate(ka2$steps~ka2$interval+ka2$weekend,ka2,mean)
-    names(ka21) <- c("interval","Weekend?","steps")
-    par(mfrow=c(1,1))
-    with(ka21,plot(steps~interval,type="n",main="Weekday vs weekend avg"))
-    with(ka21[ka21$`Weekend?`=="TRUE",],lines(steps~interval),type="l",col="blue")
-    with(ka21[ka21$`Weekend?`=="FALSE",],lines(steps~interval),type="l",col="16")
+```r
+cam2 <- aggregate(ka2$steps,by=list(interval=ka2$interval),FUN="mean")
+jose2 <- aggregate(ka2$steps,by=list(interval=ka2$interval),FUN="median")
+```
 
-![](PA1_template_files/figure-markdown_strict/weekend-1.png)
+## Are there differences in activity patterns between weekdays and weekends?
+Now we are going to crete a time series plot for average distance covered per interval based on whether it's a weekday or weekend.
+
+```r
+ka2$weekend = chron::is.weekend(ka2$date)
+ka21 <- aggregate(ka2$steps~ka2$interval+ka2$weekend,ka2,mean)
+names(ka21) <- c("interval","Weekend?","steps")
+par(mfrow=c(1,1))
+with(ka21,plot(steps~interval,type="n",main="Weekday vs weekend avg"))
+with(ka21[ka21$`Weekend?`=="TRUE",],lines(steps~interval),type="l",col="blue")
+with(ka21[ka21$`Weekend?`=="FALSE",],lines(steps~interval),type="l",col="16")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
